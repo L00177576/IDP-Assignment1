@@ -1,0 +1,250 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: This template generated to create VPC for private and public subnets
+  
+Metadata:
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "VPC CDIR"
+        Parameters: 
+          - VpcCIDR 
+      - 
+        Label: 
+          default: "Subnet CIDR"
+        Parameters: 
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR
+          - PrivateSubnet1CIDR
+          - PrivateSubnet2CIDR
+      - 
+        Label: 
+          default: "SSH CIDR"
+        Parameters: 
+          - SSHLocation
+  
+Parameters:
+  VpcCIDR:
+    Default: 10.0.0.0/16
+    Description: Please enter IP range for the VPC
+    Type: String 
+    
+  PublicSubnet1CIDR:
+    Default: 10.0.0.0/24
+    Description: Please enter IP range for the Public subnet1
+    Type: String 
+  
+  PublicSubnet2CIDR:
+    Default: 10.0.1.0/24
+    Description: Please enter the IP range for the Public subnet 2
+    Type: String
+
+  PrivateSubnet1CIDR:
+    Default: 10.0.2.0/24
+    Description: Please enter IP range for the Private subnet1
+    Type: String 
+  
+  PrivateSubnet2CIDR:
+    Default: 10.0.3.0/24
+    Description: Please enter the IP range for the Private subnet 2
+    Type: String
+    
+  SSHLocation:
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+    ConstraintDescription: must be a valid IP range in the form x.x.x.x/x.
+    Default: 0.0.0.0/0
+    Description: The IP address range to use to access the web server using SSH.
+    MaxLength: '18'
+    MinLength: '9'
+    Type: String
+      
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: "L00177576 VPC"
+         
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: "L00177576 IGW"
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC   
+      
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:  
+      AvailabilityZone: !Select [0,!GetAZs '']
+      CidrBlock: !Ref PublicSubnet1CIDR 
+      MapPublicIpOnLaunch: true
+      Tags: 
+      - Key: Name
+        Value: L00177576 PublicSubnet1
+      VpcId: !Ref VPC 
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:  
+      AvailabilityZone: !Select [1,!GetAZs '']
+      CidrBlock: !Ref PublicSubnet2CIDR 
+      MapPublicIpOnLaunch: true
+      Tags: 
+      - Key: Name
+        Value: L00177576 PublicSubnet2
+      VpcId: !Ref VPC 
+      
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC 
+      Tags:
+      - Key: Name 
+        Value: "L00177576 PublicRouteTable"
+        
+  PublicRoute:
+    Type: AWS::EC2::Route 
+    Properties:
+       DestinationCidrBlock: 0.0.0.0/0
+       GatewayId: !Ref InternetGateway 
+       RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable 
+  
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable 
+      
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:  
+      AvailabilityZone: !Select [0,!GetAZs '']
+      CidrBlock: !Ref PrivateSubnet1CIDR 
+      MapPublicIpOnLaunch: false
+      Tags: 
+      - Key: Name
+        Value: "L00177576 PrivateSubnet1 App_Instance"
+      VpcId: !Ref VPC 
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:  
+      AvailabilityZone: !Select [1,!GetAZs '']
+      CidrBlock: !Ref PrivateSubnet2CIDR 
+      MapPublicIpOnLaunch: false
+      Tags: 
+      - Key: Name
+        Value: "L00177576 PrivateSubnet2 DB_Instance"
+      VpcId: !Ref VPC 
+
+
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup 
+    Properties:
+      GroupDescription: Enable HTTP/HTTPS access on port 80/443
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+      Tags: 
+      - Key: Name
+        Value: "L00177576 ALBSecurityGroup"
+      VpcId: !Ref VPC
+
+  SSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup 
+    Properties:
+      GroupDescription: SSH Security group 
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+      Tags: 
+      - Key: Name
+        Value: "L00177576 SSHSecurityGroup"
+      VpcId: !Ref VPC
+
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup 
+    Properties:
+      GroupDescription: Enable HTTP/HTTPS via port 80/443 locked down to Load balancer sec group + SSH access via port 22 locked down to SSH sec group 
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref ALBSecurityGroup
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHSecurityGroup
+      Tags: 
+      - Key: Name
+        Value: "L00177576 WebServerSecurityGroup"
+      VpcId: !Ref VPC
+    
+  DataBaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup 
+    Properties:
+      GroupDescription: Open DB for access 
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !Ref WebServerSecurityGroup
+      Tags: 
+      - Key: Name
+        Value: "L00177576 DataBaseSecurityGroup"
+      VpcId: !Ref VPC    
+      
+  EC2I_A:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      NetworkInterfaces:
+        - SubnetId: !Ref PublicSubnet1
+        
+  EC2I_D:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      NetworkInterfaces:
+        - SubnetId: !Ref PublicSubnet2
+        
+  EC2I_J:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      NetworkInterfaces:
+        - SubnetId: !Ref PrivateSubnet1   
+
+  EC2I_F:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      NetworkInterfaces:
+        - SubnetId: !Ref PrivateSubnet2
+#Outputs:
