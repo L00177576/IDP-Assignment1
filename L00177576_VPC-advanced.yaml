@@ -1,7 +1,15 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 Description: This template generated to create VPC for private and public subnets
-  
+
+Mappings:
+  RegionMap:
+    us-east-1:
+     "AMI": "ami-0742b4e673072066f"
+    us-west-2:
+     "AMI": "ami-0518bb0e75d3619ca"
+    eu-west-1:
+     "AMI": "ami-0f29c8402f8cce65c"     
 Metadata:
   AWS::CloudFormation::Interface: 
     ParameterGroups: 
@@ -87,7 +95,7 @@ Resources:
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:  
-      AvailabilityZone: !Select [0,!GetAZs '']
+      AvailabilityZone: 'eu-west-1a' # !Select [0,!GetAZs '']
       CidrBlock: !Ref PublicSubnet1CIDR 
       MapPublicIpOnLaunch: true
       Tags: 
@@ -98,7 +106,7 @@ Resources:
   PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:  
-      AvailabilityZone: !Select [1,!GetAZs '']
+      AvailabilityZone: 'eu-west-1b' # !Select [1,!GetAZs '']
       CidrBlock: !Ref PublicSubnet2CIDR 
       MapPublicIpOnLaunch: true
       Tags: 
@@ -136,7 +144,7 @@ Resources:
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:  
-      AvailabilityZone: !Select [0,!GetAZs '']
+      AvailabilityZone: 'eu-west-1a' # !Select [0,!GetAZs '']
       CidrBlock: !Ref PrivateSubnet1CIDR 
       MapPublicIpOnLaunch: false
       Tags: 
@@ -147,7 +155,7 @@ Resources:
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:  
-      AvailabilityZone: !Select [1,!GetAZs '']
+      AvailabilityZone: 'eu-west-1b' # !Select [1,!GetAZs '']
       CidrBlock: !Ref PrivateSubnet2CIDR 
       MapPublicIpOnLaunch: false
       Tags: 
@@ -196,15 +204,15 @@ Resources:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          CidrIp: !Ref ALBSecurityGroup
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
         - IpProtocol: tcp
           FromPort: 443
           ToPort: 443
-          CidrIp: !Ref ALBSecurityGroup
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: !Ref SSHSecurityGroup
+          SourceSecurityGroupId: !Ref SSHSecurityGroup
       Tags: 
       - Key: Name
         Value: "L00177576 WebServerSecurityGroup"
@@ -218,33 +226,59 @@ Resources:
         - IpProtocol: tcp
           FromPort: 3306
           ToPort: 3306
-          CidrIp: !Ref WebServerSecurityGroup
+          SourceSecurityGroupId: !Ref WebServerSecurityGroup
       Tags: 
       - Key: Name
         Value: "L00177576 DataBaseSecurityGroup"
-      VpcId: !Ref VPC    
+      VpcId: !Ref VPC  
       
-  EC2I_A:
-    Type: 'AWS::EC2::Instance'
+      
+  EC2PubAInstance:
+    Type: AWS::EC2::Instance
     Properties:
-      NetworkInterfaces:
-        - SubnetId: !Ref PublicSubnet1
-        
-  EC2I_D:
-    Type: 'AWS::EC2::Instance'
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      InstanceType: t2.micro
+      SubnetId: !Ref PublicSubnet1
+      SecurityGroupIds: 
+        - !Ref ALBSecurityGroup
+      Tags:
+       - Key: Name
+         Value: EC2 PublicSubnet1      
+         
+  EC2PubDInstance:
+    Type: AWS::EC2::Instance
     Properties:
-      NetworkInterfaces:
-        - SubnetId: !Ref PublicSubnet2
-        
-  EC2I_J:
-    Type: 'AWS::EC2::Instance'
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      InstanceType: t2.micro
+      SubnetId: !Ref PublicSubnet2
+      SecurityGroupIds: 
+        - !Ref DataBaseSecurityGroup
+      Tags:
+       - Key: Name
+         Value: EC2 PublicSubnet2    
+         
+  EC2PriJInstance:
+    Type: AWS::EC2::Instance
     Properties:
-      NetworkInterfaces:
-        - SubnetId: !Ref PrivateSubnet1   
-
-  EC2I_F:
-    Type: 'AWS::EC2::Instance'
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      InstanceType: t2.micro
+      SubnetId: !Ref PrivateSubnet1
+      SecurityGroupIds: 
+        - !Ref SSHSecurityGroup
+      Tags:
+       - Key: Name
+         Value: EC2 PrivateSubnet1    
+         
+  EC2PriFInstance:
+    Type: AWS::EC2::Instance
     Properties:
-      NetworkInterfaces:
-        - SubnetId: !Ref PrivateSubnet2
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      InstanceType: t2.micro
+      SubnetId: !Ref PrivateSubnet2
+      SecurityGroupIds: 
+        - !Ref WebServerSecurityGroup
+      Tags:
+       - Key: Name
+         Value: EC2 PrivateSubnet2    
+      
 #Outputs:
