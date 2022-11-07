@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 
 Description: This template generated to create VPC for private and public subnets
-
+#Defined mapping for AWS regions to refer later in the template
 Mappings:
   RegionMap:
     us-east-1:
@@ -9,7 +9,9 @@ Mappings:
     us-west-2:
      "AMI": "ami-0518bb0e75d3619ca"
     eu-west-1:
-     "AMI": "ami-0f29c8402f8cce65c"     
+     "AMI": "ami-0f29c8402f8cce65c"   
+     
+#Metadata defined to have set of parameters in a particular order when creating stack     
 Metadata:
   AWS::CloudFormation::Interface: 
     ParameterGroups: 
@@ -31,7 +33,8 @@ Metadata:
           default: "SSH CIDR"
         Parameters: 
           - SSHLocation
-  
+          
+#Define Parameters
 Parameters:
   VpcCIDR:
     Default: 10.0.0.0/16
@@ -66,8 +69,9 @@ Parameters:
     MaxLength: '18'
     MinLength: '9'
     Type: String
-      
+  
 Resources:
+#Create VPC
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -78,7 +82,8 @@ Resources:
       Tags:
       - Key: Name
         Value: "L00177576 VPC"
-         
+        
+#Create InternetGateway         
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -90,8 +95,9 @@ Resources:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       InternetGatewayId: !Ref InternetGateway
-      VpcId: !Ref VPC   
+      VpcId: !Ref VPC  
       
+#Create PublicSubnet1        
   PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:  
@@ -102,7 +108,8 @@ Resources:
       - Key: Name
         Value: L00177576 PublicSubnet1
       VpcId: !Ref VPC 
-
+      
+#Create PublicSubnet2  
   PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:  
@@ -113,7 +120,8 @@ Resources:
       - Key: Name
         Value: L00177576 PublicSubnet2
       VpcId: !Ref VPC 
-      
+
+#Create RouteTable        
   PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -121,7 +129,8 @@ Resources:
       Tags:
       - Key: Name 
         Value: "L00177576 PublicRouteTable"
-        
+
+#Create Route          
   PublicRoute:
     Type: AWS::EC2::Route 
     Properties:
@@ -129,6 +138,7 @@ Resources:
        GatewayId: !Ref InternetGateway 
        RouteTableId: !Ref PublicRouteTable
 
+#Create RouteTableAssociation
   PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -140,7 +150,8 @@ Resources:
     Properties:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRouteTable 
-      
+
+#Create PrivateSubnet1
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:  
@@ -152,6 +163,7 @@ Resources:
         Value: "L00177576 PrivateSubnet1 App_Instance"
       VpcId: !Ref VPC 
 
+#Create PrivateSubnet2
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:  
@@ -163,7 +175,7 @@ Resources:
         Value: "L00177576 PrivateSubnet2 DB_Instance"
       VpcId: !Ref VPC 
 
-
+#Create App Load Balancing SecurityGroup
   ALBSecurityGroup:
     Type: AWS::EC2::SecurityGroup 
     Properties:
@@ -182,6 +194,7 @@ Resources:
         Value: "L00177576 ALBSecurityGroup"
       VpcId: !Ref VPC
 
+#Create SSH SecurityGroup
   SSHSecurityGroup:
     Type: AWS::EC2::SecurityGroup 
     Properties:
@@ -196,6 +209,7 @@ Resources:
         Value: "L00177576 SSHSecurityGroup"
       VpcId: !Ref VPC
 
+#Create Web Server SecurityGroup
   WebServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup 
     Properties:
@@ -217,7 +231,8 @@ Resources:
       - Key: Name
         Value: "L00177576 WebServerSecurityGroup"
       VpcId: !Ref VPC
-    
+
+#Create DataBase SecurityGroup
   DataBaseSecurityGroup:
     Type: AWS::EC2::SecurityGroup 
     Properties:
@@ -232,7 +247,7 @@ Resources:
         Value: "L00177576 DataBaseSecurityGroup"
       VpcId: !Ref VPC  
       
-      
+#Create 4 EC2 Instances in each of Subnets     
   EC2PubAInstance:
     Type: AWS::EC2::Instance
     Properties:
